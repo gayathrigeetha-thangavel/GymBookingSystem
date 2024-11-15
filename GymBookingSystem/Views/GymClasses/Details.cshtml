@@ -22,11 +22,24 @@
         <dd class = "col-sm-10">
             @Html.DisplayFor(model => model.StartTime)
         </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Duration)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Duration)
+        </dd>
         <dt class = "col-sm-2">
             @Html.DisplayNameFor(model => model.Description)
         </dt>
         <dd class = "col-sm-10">
             @Html.DisplayFor(model => model.Description)
+        </dd>
+        <dd class="col-sm-10">
+            <h6 class="col-sm-2">Attending members: </h6>
+            @foreach (var attendee in Model.AttendingMembers)
+            {
+                <div class="row ms-1">@attendee.User.Email</div>
+            }
         </dd>
     </dl>
 </div>

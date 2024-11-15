@@ -7,17 +7,23 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using GymBookingSystem.Data;
 using GymBookingSystem.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 
 namespace GymBookingSystem.Controllers
 {
+    [Authorize]
     public class GymClassesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public GymClassesController(ApplicationDbContext context)
+        public GymClassesController(UserManager<ApplicationUser> userManager, ApplicationDbContext context)
         {
             _context = context;
+            _userManager = userManager;
         }
+
 
         // GET: GymClasses
         public async Task<IActionResult> Index()
@@ -33,14 +39,17 @@ namespace GymBookingSystem.Controllers
                 return NotFound();
             }
 
-            var gymClass = await _context.GymClasses
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (gymClass == null)
+            var gymClassWithAttendees = await _context.GymClasses
+                .Where(g => g.Id == id)
+                .Include(c => c.AttendingMembers)
+                .ThenInclude(u => u.User).FirstOrDefaultAsync();
+
+            if (gymClassWithAttendees == null)
             {
                 return NotFound();
             }
 
-            return View(gymClass);
+            return View(gymClassWithAttendees);
         }
 
         // GET: GymClasses/Create
@@ -54,7 +63,7 @@ namespace GymBookingSystem.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,StartTime,Description")] GymClass gymClass)
+        public async Task<IActionResult> Create([Bind("Id,Name,StartTime,Description,Duration")] GymClass gymClass)
         {
             if (ModelState.IsValid)
             {
@@ -62,6 +71,14 @@ namespace GymBookingSystem.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
+
+            /** Replace with actual logging to find what error has occurred
+            var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+            foreach (var error in errors)
+            {
+                Console.WriteLine(error); 
+            }**/
+
             return View(gymClass);
         }
 
@@ -153,5 +170,52 @@ namespace GymBookingSystem.Controllers
         {
             return _context.GymClasses.Any(e => e.Id == id);
         }
-    }
+
+        public async Task<IActionResult> BookingToogle(int? id)
+        {
+            if (id == null) return NotFound();
+
+            // Get the ID of the currently logged-in user
+            var userId = _userManager.GetUserId(User);
+            if (userId == null)
+            {
+                return NotFound();
+            }
+
+            
+            var gymClassBooking = await _context.GymClasses
+                .Include(g => g.AttendingMembers)
+                .FirstOrDefaultAsync(g => g.Id == id);
+
+            if (gymClassBooking == null)
+            {
+                return NotFound();
+            }
+
+            // Check if the member is already attending the session
+            var attendance = gymClassBooking.AttendingMembers
+                .FirstOrDefault(a => a.ApplicationUserId == userId);
+
+            if (attendance == null)
+            {
+                // if member is not attending, so add them to the class
+                gymClassBooking.AttendingMembers.Add(new ApplicationUserGymClass
+                {
+                    ApplicationUserId = userId,
+                    GymClassId = (int)id
+                });
+            }
+            else
+            {
+                // Member is already attending, so remove them
+                gymClassBooking.AttendingMembers.Remove(attendance);
+            }
+
+            // Save changes to the database
+            await _context.SaveChangesAsync();
+
+            // Redirect or return a suitable response
+            return RedirectToAction(nameof(Index));
+        }
+    }     
 }
