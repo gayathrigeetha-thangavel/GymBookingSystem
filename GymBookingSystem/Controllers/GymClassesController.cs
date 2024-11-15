@@ -39,14 +39,17 @@ namespace GymBookingSystem.Controllers
                 return NotFound();
             }
 
-            var gymClass = await _context.GymClasses
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (gymClass == null)
+            var gymClassWithAttendees = await _context.GymClasses
+                .Where(g => g.Id == id)
+                .Include(c => c.AttendingMembers)
+                .ThenInclude(u => u.User).FirstOrDefaultAsync();
+
+            if (gymClassWithAttendees == null)
             {
                 return NotFound();
             }
 
-            return View(gymClass);
+            return View(gymClassWithAttendees);
         }
 
         // GET: GymClasses/Create

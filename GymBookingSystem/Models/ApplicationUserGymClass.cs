@@ -8,7 +8,7 @@
 
 
         //Navigational property
-        public ApplicationUser ApplicationUser { get; set; }
+        public ApplicationUser User { get; set; }
         public GymClass GymClass { get; set; }
 
 
