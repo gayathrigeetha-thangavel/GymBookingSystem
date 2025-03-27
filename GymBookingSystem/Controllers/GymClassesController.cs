@@ -24,7 +24,6 @@ namespace GymBookingSystem.Controllers
             _userManager = userManager;
         }
 
-
         // GET: GymClasses
         public async Task<IActionResult> Index()
         {
@@ -97,6 +96,7 @@ namespace GymBookingSystem.Controllers
             }
             return View(gymClass);
         }
+
 
         // POST: GymClasses/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
